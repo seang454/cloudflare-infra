@@ -1,0 +1,6 @@
+apiVersion: v2
+name: redis
+description: Redis StatefulSet -- Nextcloud file locking + memcache (official upstream image)
+type: application
+version: 1.0.0
+appVersion: "7"

@@ -1,0 +1,2 @@
+Redis StatefulSet: {{ include "redis.fullname" . }}
+Service (in-cluster DNS): {{ include "redis.fullname" . }}:6379

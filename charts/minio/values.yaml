@@ -1,0 +1,30 @@
+# Defaults for the minio subchart. Overridden from the parent chart's
+# values.yaml / environments/*.yaml under the `minio:` key.
+
+image: minio/minio
+imageTag: "latest"
+mode: standalone   # standalone (1 node) or distributed -- see top-level README
+
+rootUser: minioadmin
+existingSecret: ""
+rootPassword: "CHANGE_ME_MINIO"
+
+bucketName: nextcloud-data
+
+persistence:
+  enabled: true
+  size: 100Gi
+  accessMode: ReadWriteOnce
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 2Gi
+
+ingress:
+  enabled: false   # set true to expose the MinIO console externally
+  console:
+    host: "minio-console.example.com"

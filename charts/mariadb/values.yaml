@@ -1,0 +1,29 @@
+# Defaults for the mariadb subchart. Overridden from the parent chart's
+# values.yaml / environments/*.yaml under the `mariadb:` key.
+
+image: mariadb
+imageTag: "11"
+replicaCount: 1   # single-primary; see top-level README for HA/Galera notes
+
+auth:
+  database: nextcloud
+  username: nextcloud
+  # For production, set existingSecret to a Secret you manage out-of-band
+  # (e.g. via External Secrets Operator + Vault) and leave the passwords below
+  # unused. rootPassword/password are only consumed when existingSecret is "".
+  existingSecret: ""
+  rootPassword: "CHANGE_ME_ROOT"
+  password: "CHANGE_ME_APP"
+
+persistence:
+  enabled: true
+  size: 20Gi
+  accessMode: ReadWriteOnce
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi

@@ -1,0 +1,40 @@
+# helm install csp-dev . -f environments/dev-values.yaml -n nextcloud-dev --create-namespace
+
+global:
+  storageClass: "standard"
+  domain: "nextcloud.dev.local"
+
+mariadb:
+  persistence:
+    size: 5Gi
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: 500m, memory: 512Mi }
+
+redis:
+  persistence:
+    size: 1Gi
+
+minio:
+  persistence:
+    size: 10Gi
+  ingress:
+    enabled: false
+
+nextcloud:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  persistence:
+    accessMode: ReadWriteOnce   # fine with a single replica
+    size: 5Gi
+  ingress:
+    enabled: false
+  podDisruptionBudget:
+    enabled: false
+  networkPolicy:
+    enabled: false
+  resources:
+    php:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits: { cpu: 500m, memory: 512Mi }

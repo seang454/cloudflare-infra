@@ -1,0 +1,11 @@
+Nextcloud deployed as {{ .Values.replicaCount }} replica(s) (autoscaling: {{ .Values.autoscaling.enabled }}).
+
+{{- if .Values.ingress.enabled }}
+URL: https://{{ .Values.global.domain }}
+{{- end }}
+
+Admin user: {{ .Values.admin.username }}
+{{- if not .Values.admin.existingSecret }}
+Admin password was set from values.yaml -- rotate it after first login, or better,
+set admin.existingSecret to a Vault-backed Secret via External Secrets Operator.
+{{- end }}

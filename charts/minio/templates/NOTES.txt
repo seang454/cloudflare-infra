@@ -1,0 +1,8 @@
+MinIO StatefulSet: {{ include "minio.fullname" . }}
+S3 API (in-cluster): http://{{ include "minio.fullname" . }}:9000
+Bucket: {{ .Values.bucketName }}
+{{- if .Values.ingress.enabled }}
+Console: https://{{ .Values.ingress.console.host }}
+{{- else }}
+Console: kubectl port-forward svc/{{ include "minio.fullname" . }} 9001:9001
+{{- end }}

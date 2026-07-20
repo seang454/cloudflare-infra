@@ -1,0 +1,6 @@
+apiVersion: v2
+name: mariadb
+description: MariaDB StatefulSet -- Nextcloud metadata store (official upstream image, no Bitnami)
+type: application
+version: 1.0.0
+appVersion: "11"

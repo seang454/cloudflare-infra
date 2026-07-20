@@ -1,0 +1,25 @@
+Cloud Storage Platform deployed.
+
+Components (each is its own subchart):
+  - MariaDB   : {{ include "mariadb.fullname" . }} (metadata store)
+  - Redis     : {{ include "redis.fullname" . }} (locking/cache)
+  - MinIO     : {{ include "minio.fullname" . }} (S3 primary object storage)
+  - Nextcloud : {{ include "nextcloud.fullname" . }} (drive UI)
+
+Check rollout status:
+  kubectl rollout status statefulset/{{ include "mariadb.fullname" . }}
+  kubectl rollout status statefulset/{{ include "redis.fullname" . }}
+  kubectl rollout status statefulset/{{ include "minio.fullname" . }}
+  kubectl rollout status deployment/{{ include "nextcloud.fullname" . }}
+
+Nextcloud will be reachable at:
+{{- if .Values.nextcloud.ingress.enabled }}
+  https://{{ .Values.global.domain }}
+{{- else }}
+  (ingress disabled -- use `kubectl port-forward` to reach the nextcloud service)
+{{- end }}
+
+First-run reminder: enable encryption once pods are healthy:
+  kubectl exec -it deploy/{{ include "nextcloud.fullname" . }} -c php-fpm -- php occ app:enable encryption
+  kubectl exec -it deploy/{{ include "nextcloud.fullname" . }} -c php-fpm -- php occ encryption:enable
+  kubectl exec -it deploy/{{ include "nextcloud.fullname" . }} -c php-fpm -- php occ encryption:select-encryption-type

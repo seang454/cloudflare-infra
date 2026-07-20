@@ -1,0 +1,35 @@
+# helm install csp-staging . -f environments/staging-values.yaml -n nextcloud-staging --create-namespace
+
+global:
+  storageClass: "longhorn"
+  domain: "cloud-staging.example.com"
+
+mariadb:
+  persistence:
+    size: 10Gi
+
+redis:
+  persistence:
+    size: 2Gi
+
+minio:
+  persistence:
+    size: 50Gi
+  ingress:
+    enabled: true
+    console:
+      host: "minio-console-staging.example.com"
+
+nextcloud:
+  replicaCount: 2
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+  persistence:
+    accessMode: ReadWriteMany
+    size: 10Gi
+  ingress:
+    enabled: true
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-staging"

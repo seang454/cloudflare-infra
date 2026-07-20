@@ -1,0 +1,141 @@
+# Default values for cloud-storage-platform.
+# Override per-environment via environments/{dev,staging,production}-values.yaml
+# e.g. helm install csp . -f environments/production-values.yaml
+
+global:
+  storageClass: "longhorn"      # set to your cluster's StorageClass (Longhorn, etc.)
+  domain: "nextcloud.seang.shop"   # Nextcloud external hostname
+
+# ---------------------------------------------------------------------------
+# MariaDB (metadata store: users, folder tree, shares, permissions)
+# ---------------------------------------------------------------------------
+mariadb:
+  enabled: true
+  image: mariadb
+  imageTag: "11"
+  replicaCount: 1   # single-primary; see README for HA/Galera notes
+  auth:
+    database: nextcloud
+    username: nextcloud
+    # rootPassword / password are injected via existingSecret in production;
+    # these are ONLY used for local/dev convenience.
+    existingSecret: ""   # set to a pre-created Secret name to use External Secrets Operator / Vault
+    rootPassword: "CHANGE_ME_ROOT"
+    password: "CHANGE_ME_APP"
+  persistence:
+    enabled: true
+    size: 20Gi
+    accessMode: ReadWriteOnce
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+# ---------------------------------------------------------------------------
+# Redis (file locking + memcache -- required for multi-replica Nextcloud)
+# ---------------------------------------------------------------------------
+redis:
+  enabled: true
+  image: redis
+  imageTag: "7-alpine"
+  existingSecret: ""
+  password: "CHANGE_ME_REDIS"
+  persistence:
+    enabled: true
+    size: 5Gi
+    accessMode: ReadWriteOnce
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# ---------------------------------------------------------------------------
+# MinIO (S3-compatible primary object storage for file bytes)
+# ---------------------------------------------------------------------------
+minio:
+  enabled: true
+  image: minio/minio
+  imageTag: "latest"
+  mode: standalone   # standalone (1 node) or distributed (see README for distributed notes)
+  rootUser: minioadmin
+  existingSecret: ""
+  rootPassword: "CHANGE_ME_MINIO"
+  bucketName: nextcloud-data
+  persistence:
+    enabled: true
+    size: 100Gi
+    accessMode: ReadWriteOnce
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 2Gi
+  ingress:
+    enabled: false   # set true to expose the MinIO console externally (usually keep internal-only)
+    console:
+      host: "minio-console.seang.shop"
+
+# ---------------------------------------------------------------------------
+# Nextcloud subchart overrides
+# ---------------------------------------------------------------------------
+nextcloud:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: nextcloud
+    tag: "29-fpm"
+    pullPolicy: IfNotPresent
+  nginx:
+    image:
+      repository: nginx
+      tag: "1.27-alpine"
+  admin:
+    username: admin
+    existingSecret: ""
+    password: "CHANGE_ME_ADMIN"
+  persistence:
+    enabled: true
+    accessMode: ReadWriteMany   # REQUIRED for >1 replica -- see README
+    size: 10Gi
+  resources:
+    php:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: "2"
+        memory: 2Gi
+    nginx:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      nginx.ingress.kubernetes.io/proxy-body-size: "10G"
+    tls:
+      enabled: true
+      secretName: nextcloud-tls
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  networkPolicy:
+    enabled: true

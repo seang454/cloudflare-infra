@@ -1,0 +1,6 @@
+apiVersion: v2
+name: minio
+description: MinIO StatefulSet -- S3-compatible primary object storage for Nextcloud (official upstream image)
+type: application
+version: 1.0.0
+appVersion: "latest"

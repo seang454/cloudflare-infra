@@ -1,0 +1,88 @@
+# Defaults for the nextcloud subchart.
+# Most of this is overridden from the parent chart's values.yaml under the
+# `nextcloud:` key -- see /values.yaml and /environments/*.yaml.
+
+replicaCount: 2
+
+image:
+  repository: nextcloud
+  tag: "29-fpm"
+  pullPolicy: IfNotPresent
+
+nginx:
+  image:
+    repository: nginx
+    tag: "1.27-alpine"
+
+admin:
+  username: admin
+  existingSecret: ""
+  password: "CHANGE_ME_ADMIN"
+
+# Database credentials -- must match parent chart's mariadb.auth values
+# (kept separate here so the subchart also works standalone against an
+# external DB if someone points it elsewhere).
+database:
+  name: nextcloud
+  username: nextcloud
+  existingSecret: ""     # falls back to reading the parent mariadb secret if empty
+
+persistence:
+  enabled: true
+  accessMode: ReadWriteMany   # REQUIRED for replicaCount > 1 -- see README
+  size: 10Gi
+
+# Primary storage backend (MinIO). bucket/region/port must match the parent
+# chart's `minio.bucketName` -- kept in sync manually since values.yaml files
+# are not cross-templated between parent and subchart.
+objectStore:
+  bucket: nextcloud-data
+  port: 9000
+  ssl: false
+  region: us-east-1
+  usePathStyle: true
+  existingSecret: ""   # falls back to reading the parent minio secret if empty
+
+resources:
+  php:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 2Gi
+  nginx:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations: {}
+  tls:
+    enabled: true
+    secretName: nextcloud-tls
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+networkPolicy:
+  enabled: true
+
+serviceAccount:
+  create: true
+  name: ""
+
+phpMemoryLimit: "1024M"
+phpUploadLimit: "10G"
