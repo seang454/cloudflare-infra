@@ -101,8 +101,13 @@ spec:
           livenessProbe:
             tcpSocket:
               port: fpm
-            initialDelaySeconds: 30
+            initialDelaySeconds: 10
             periodSeconds: 20
+          startupProbe:
+            tcpSocket:
+              port: fpm
+            failureThreshold: 60
+            periodSeconds: 10
 
         # --- nginx: serves static assets + fronts php-fpm over FastCGI on localhost ---
         - name: nginx
