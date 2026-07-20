@@ -1,88 +1,208 @@
 # Defaults for the nextcloud subchart.
-# Most of this is overridden from the parent chart's values.yaml under the
-# `nextcloud:` key -- see /values.yaml and /environments/*.yaml.
+# Optimized for:
+# - Single Nextcloud replica
+# - Longhorn RWO storage
+# - Kubernetes small cluster
 
-replicaCount: 2
+
+# ---------------------------------------------------------------------------
+# Nextcloud
+# ---------------------------------------------------------------------------
+
+replicaCount: 1
+
 
 image:
   repository: nextcloud
   tag: "29-fpm"
   pullPolicy: IfNotPresent
 
+
+# ---------------------------------------------------------------------------
+# Nginx sidecar
+# ---------------------------------------------------------------------------
+
 nginx:
   image:
     repository: nginx
     tag: "1.27-alpine"
+
+
+
+# ---------------------------------------------------------------------------
+# Admin user
+# ---------------------------------------------------------------------------
 
 admin:
   username: admin
   existingSecret: ""
   password: "CHANGE_ME_ADMIN"
 
-# Database credentials -- must match parent chart's mariadb.auth values
-# (kept separate here so the subchart also works standalone against an
-# external DB if someone points it elsewhere).
+
+
+# ---------------------------------------------------------------------------
+# Database
+# MariaDB
+# ---------------------------------------------------------------------------
+
 database:
+
   name: nextcloud
+
   username: nextcloud
-  existingSecret: ""     # falls back to reading the parent mariadb secret if empty
+
+  # Empty means use generated MariaDB secret
+  existingSecret: ""
+
+
+
+# ---------------------------------------------------------------------------
+# Persistent Storage
+#
+# Longhorn default:
+# ReadWriteOnce
+#
+# Do NOT use ReadWriteMany unless you have RWX storage.
+# ---------------------------------------------------------------------------
 
 persistence:
-  enabled: true
-  accessMode: ReadWriteMany   # REQUIRED for replicaCount > 1 -- see README
-  size: 10Gi
 
-# Primary storage backend (MinIO). bucket/region/port must match the parent
-# chart's `minio.bucketName` -- kept in sync manually since values.yaml files
-# are not cross-templated between parent and subchart.
+  enabled: true
+
+  accessMode: ReadWriteOnce
+
+  size: 5Gi
+
+
+
+# ---------------------------------------------------------------------------
+# Object Storage
+# MinIO / S3
+# ---------------------------------------------------------------------------
+
 objectStore:
+
   bucket: nextcloud-data
+
   port: 9000
+
   ssl: false
+
   region: us-east-1
+
   usePathStyle: true
-  existingSecret: ""   # falls back to reading the parent minio secret if empty
+
+  existingSecret: ""
+
+
+
+# ---------------------------------------------------------------------------
+# Resources
+# ---------------------------------------------------------------------------
 
 resources:
+
   php:
+
     requests:
-      cpu: 500m
+      cpu: 200m
+      memory: 512Mi
+
+    limits:
+      cpu: "1"
       memory: 1Gi
-    limits:
-      cpu: "2"
-      memory: 2Gi
+
+
   nginx:
+
     requests:
-      cpu: 100m
-      memory: 128Mi
+      cpu: 50m
+      memory: 64Mi
+
     limits:
-      cpu: 500m
-      memory: 256Mi
+      cpu: 200m
+      memory: 128Mi
+
+
+
+# ---------------------------------------------------------------------------
+# Autoscaling
+#
+# Disabled because:
+# replicaCount = 1
+# PVC = ReadWriteOnce
+# ---------------------------------------------------------------------------
 
 autoscaling:
-  enabled: true
-  minReplicas: 2
-  maxReplicas: 6
-  targetCPUUtilizationPercentage: 70
+
+  enabled: false
+
+
+
+# ---------------------------------------------------------------------------
+# Ingress
+# ---------------------------------------------------------------------------
 
 ingress:
+
   enabled: true
+
   className: "nginx"
-  annotations: {}
+
+
+  annotations:
+
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+
+    nginx.ingress.kubernetes.io/proxy-body-size: "10G"
+
+
   tls:
+
     enabled: true
+
     secretName: nextcloud-tls
 
+
+
+# ---------------------------------------------------------------------------
+# Pod Disruption Budget
+#
+# Disabled because only one replica.
+# ---------------------------------------------------------------------------
+
 podDisruptionBudget:
-  enabled: true
-  minAvailable: 1
+
+  enabled: false
+
+
+
+# ---------------------------------------------------------------------------
+# Network Policy
+# ---------------------------------------------------------------------------
 
 networkPolicy:
+
   enabled: true
 
+
+
+# ---------------------------------------------------------------------------
+# Service Account
+# ---------------------------------------------------------------------------
+
 serviceAccount:
+
   create: true
+
   name: ""
 
+
+
+# ---------------------------------------------------------------------------
+# PHP Settings
+# ---------------------------------------------------------------------------
+
 phpMemoryLimit: "1024M"
+
 phpUploadLimit: "10G"
