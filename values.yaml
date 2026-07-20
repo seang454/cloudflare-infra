@@ -90,7 +90,7 @@ minio:
       memory: 1Gi
 
   ingress:
-    enabled: false
+    enabled: true
 
     console:
       host: "minio.seang.shop"
