@@ -98,6 +98,7 @@ spec:
               command: ["sh", "-c", "php-fpm-healthcheck || exit 0"]
             initialDelaySeconds: 20
             periodSeconds: 15
+            timeoutSeconds: 5
           livenessProbe:
             tcpSocket:
               port: fpm
@@ -130,6 +131,7 @@ spec:
               port: http
             initialDelaySeconds: 15
             periodSeconds: 15
+            timeoutSeconds: 5
           livenessProbe:
             tcpSocket:
               port: http
