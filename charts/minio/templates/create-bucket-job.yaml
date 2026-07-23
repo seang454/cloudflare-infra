@@ -1,0 +1,51 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "minio.fullname" . }}-create-bucket
+  labels:
+    {{- include "minio.labels" . | nindent 4 }}
+  annotations:
+    # Re-run on every helm upgrade so the bucket is always ensured to exist.
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 6
+  template:
+    metadata:
+      labels:
+        {{- include "minio.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: create-bucket
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: mc
+          image: minio/mc:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              # Wait for MinIO to be ready
+              until mc alias set myminio http://{{ include "minio.fullname" . }}:9000 \
+                    "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" 2>/dev/null; do
+                echo "Waiting for MinIO..."; sleep 3
+              done
+              # Create bucket if it doesn't exist (idempotent)
+              if mc ls myminio/{{ .Values.bucketName }} > /dev/null 2>&1; then
+                echo "Bucket {{ .Values.bucketName }} already exists — skipping."
+              else
+                mc mb myminio/{{ .Values.bucketName }}
+                echo "Bucket {{ .Values.bucketName }} created."
+              fi
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "minio.secretName" . }}
+                  key: root-user
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "minio.secretName" . }}
+                  key: root-password

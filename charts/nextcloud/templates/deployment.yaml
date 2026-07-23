@@ -108,7 +108,7 @@ spec:
           startupProbe:
             tcpSocket:
               port: fpm
-            failureThreshold: 60
+            failureThreshold: 180   # 30 min — first-boot init (file copy + occ install) can be slow
             periodSeconds: 10
 
         # --- nginx: serves static assets + fronts php-fpm over FastCGI on localhost ---

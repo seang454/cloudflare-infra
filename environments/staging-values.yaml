@@ -2,33 +2,33 @@
 
 global:
   storageClass: "longhorn"
-  domain: "cloud-staging.example.com"
+  domain: "nextcloud-test.seang.shop"
 
 mariadb:
   persistence:
-    size: 10Gi
+    size: 1Gi
 
 redis:
   persistence:
-    size: 2Gi
+    size: 1Gi
 
 minio:
   persistence:
-    size: 50Gi
+    size: 1Gi
   ingress:
     enabled: true
     console:
-      host: "minio-console-staging.example.com"
+      host: "minio-test.seang.shop"
 
 nextcloud:
-  replicaCount: 2
+  # Single replica required — Longhorn uses RWO (ReadWriteOnce).
+  # Two pods on an RWO PVC causes php-fpm Exit 65 crashes.
+  replicaCount: 1
   autoscaling:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 4
+    enabled: false
   persistence:
-    accessMode: ReadWriteMany
-    size: 10Gi
+    accessMode: ReadWriteOnce
+    size: 1Gi
   ingress:
     enabled: true
     annotations:

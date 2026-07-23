@@ -3,7 +3,7 @@
 
 global:
   storageClass: "longhorn"
-  domain: "nextcloud.seang.shop"
+  domain: "nextcloud-pro.seang.shop"
 
 # ---------------------------------------------------------------------------
 # MariaDB
@@ -93,7 +93,7 @@ minio:
     enabled: true
 
     console:
-      host: "minio.seang.shop"
+      host: "minio-pro.seang.shop"
 
 
 # ---------------------------------------------------------------------------
