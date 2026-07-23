@@ -21,6 +21,7 @@ spec:
       serviceAccountName: {{ include "nextcloud.serviceAccountName" . }}
       securityContext:
         fsGroup: 33   # www-data
+        fsGroupChangePolicy: OnRootMismatch
       containers:
         # --- PHP-FPM: runs the actual Nextcloud application code ---
         - name: php-fpm
@@ -129,6 +130,9 @@ spec:
             httpGet:
               path: /status.php
               port: http
+              httpHeaders:
+                - name: Host
+                  value: {{ .Values.global.domain | quote }}
             initialDelaySeconds: 15
             periodSeconds: 15
             timeoutSeconds: 5

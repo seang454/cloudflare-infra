@@ -1,0 +1,56 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "nextcloud.fullname" . }}-cron
+  labels:
+    {{- include "nextcloud.labels" . | nindent 4 }}
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "nextcloud.labels" . | nindent 12 }}
+        spec:
+          restartPolicy: OnFailure
+          affinity:
+            podAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchLabels:
+                      app.kubernetes.io/name: nextcloud
+                      app.kubernetes.io/instance: {{ .Release.Name }}
+                  topologyKey: kubernetes.io/hostname
+          containers:
+            - name: nextcloud-cron
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command: ["su", "-s", "/bin/sh", "www-data", "-c", "php -f /var/www/html/cron.php"]
+              volumeMounts:
+                - name: nextcloud-html
+                  mountPath: /var/www/html
+              env:
+                - name: MYSQL_HOST
+                  value: {{ include "nextcloud.mariadb.host" . }}
+                - name: MYSQL_DATABASE
+                  value: {{ .Values.database.name | quote }}
+                - name: MYSQL_USER
+                  value: {{ .Values.database.username | quote }}
+                - name: MYSQL_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.database.existingSecret | default (printf "%s-mariadb-auth" .Release.Name) }}
+                      key: mariadb-password
+                - name: REDIS_HOST
+                  value: {{ include "nextcloud.redis.host" . }}
+                - name: REDIS_HOST_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ printf "%s-redis-auth" .Release.Name }}
+                      key: redis-password
+          volumes:
+            - name: nextcloud-html
+              persistentVolumeClaim:
+                claimName: {{ include "nextcloud.fullname" . }}-html

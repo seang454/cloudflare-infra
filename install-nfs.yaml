@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: install-nfs-common
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      name: install-nfs-common
+  template:
+    metadata:
+      labels:
+        name: install-nfs-common
+    spec:
+      hostPID: true
+      hostNetwork: true
+      containers:
+      - name: install-nfs-common
+        image: alpine
+        securityContext:
+          privileged: true
+        command: [ "nsenter", "-t", "1", "-m", "-u", "-n", "-i", "--", "sh", "-c", "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y nfs-common && sleep infinity" ]
