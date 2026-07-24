@@ -17,14 +17,32 @@ spec:
           restartPolicy: OnFailure
           affinity:
             podAffinity:
-              preferredDuringSchedulingIgnoredDuringExecution:
-                - weight: 100
-                  podAffinityTerm:
-                    labelSelector:
-                      matchLabels:
-                        app.kubernetes.io/name: nextcloud
-                        app.kubernetes.io/instance: {{ .Release.Name }}
-                    topologyKey: kubernetes.io/hostname
+              # REQUIRED (not preferred) — RWO PVC (Longhorn) can only be mounted
+              # on the node that the main Nextcloud pod already holds it on.
+              requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchLabels:
+                      app.kubernetes.io/name: nextcloud
+                      app.kubernetes.io/instance: {{ .Release.Name }}
+                  topologyKey: kubernetes.io/hostname
+          initContainers:
+            - name: wait-for-install
+              image: busybox:1.36
+              command:
+                - sh
+                - -c
+                - |
+                  echo "Waiting for Nextcloud to finish installing..."
+                  # config.php is created EARLY by the entrypoint (before occ install runs),
+                  # so we must check for 'installed' => true inside it, not just file existence.
+                  until grep -q "'installed' => true" /var/www/html/config/config.php 2>/dev/null; do
+                    echo "Not installed yet (config.php missing or installed=false), sleeping 5s..."
+                    sleep 5
+                  done
+                  echo "Nextcloud is fully installed. Proceeding."
+              volumeMounts:
+                - name: nextcloud-html
+                  mountPath: /var/www/html
           containers:
             - name: nextcloud-cron
               image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

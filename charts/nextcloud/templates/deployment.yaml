@@ -22,8 +22,39 @@ spec:
       securityContext:
         fsGroup: 33   # www-data
         fsGroupChangePolicy: OnRootMismatch
+      initContainers:
+        # Wait for MariaDB to accept TCP connections before starting the
+        # Nextcloud entrypoint. Without this, the first-boot installer runs
+        # while MariaDB is still initialising, silently fails, and leaves
+        # Nextcloud in a broken "not installed" state (causing cron CrashLoopBackOff).
+        - name: wait-for-mariadb
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for MariaDB at {{ include "nextcloud.mariadb.host" . }}:3306..."
+              until nc -z {{ include "nextcloud.mariadb.host" . }} 3306; do
+                echo "MariaDB not ready yet, retrying in 3s..."
+                sleep 3
+              done
+              echo "MariaDB is accepting connections."
+        # Wait for Redis as well — Nextcloud configures it during install.
+        - name: wait-for-redis
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for Redis at {{ include "nextcloud.redis.host" . }}:6379..."
+              until nc -z {{ include "nextcloud.redis.host" . }} 6379; do
+                echo "Redis not ready yet, retrying in 3s..."
+                sleep 3
+              done
+              echo "Redis is ready."
       containers:
         # --- PHP-FPM: runs the actual Nextcloud application code ---
+
         - name: php-fpm
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -60,7 +91,8 @@ spec:
                   name: {{ .Values.admin.existingSecret | default (printf "%s-admin" (include "nextcloud.fullname" .)) }}
                   key: password
             - name: NEXTCLOUD_TRUSTED_DOMAINS
-              value: {{ .Values.global.domain | quote }}
+              # Space-separated list: public domain + internal service name + localhost
+              value: "{{ .Values.global.domain }} {{ include "nextcloud.fullname" . }} localhost"
             - name: OBJECTSTORE_S3_BUCKET
               value: {{ .Values.objectStore.bucket | quote }}
             - name: OBJECTSTORE_S3_HOST
@@ -131,8 +163,11 @@ spec:
               path: /status.php
               port: http
               httpHeaders:
+                # Use localhost — probe runs inside the pod (not through ingress).
+                # Using the public domain caused 400 Bad Request when trusted_domains
+                # was not yet configured to include it.
                 - name: Host
-                  value: {{ .Values.global.domain | quote }}
+                  value: "localhost"
             initialDelaySeconds: 15
             periodSeconds: 15
             timeoutSeconds: 5
